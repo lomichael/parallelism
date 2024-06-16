@@ -1,7 +1,7 @@
 import torch.nn as nn
-import transformers
+from transformers import GPT2LMHeadModel
 
-class SimpleTransformer(nn.Module):
+class SimpleGPT2(nn.Module):
 	def __init__(self, model_name='gpt2'):
 		super(SimpleGPT2, self).__init__()
 		self.transformer = GPT2LMHeadModel.from_pretrained(model_name)
