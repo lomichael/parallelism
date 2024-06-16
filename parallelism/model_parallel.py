@@ -9,8 +9,8 @@ class ModelParallel(nn.Module):
 		self.device1 = torch.device('cuda:1')
 
 		# Split the model into two parts
-		self.model.transformer.half1 = self.model.transformer.h[:6].to(self.device0)
-		self.model.transformer.half2 = self.model.transformer.h[6:].to(self.device1)
+		self.model.transformer.half1 = nn.Sequential(*self.model.transformer.h[:6]).to(self.device0)
+		self.model.transformer.half2 = nn.Sequential(*self.model.transformer.h[6:]).to(self.device1)
 
 	def forward(self, x):
 		x = x.to(self.device0)
@@ -21,5 +21,5 @@ class ModelParallel(nn.Module):
 		x = self.model.transformer.half2(x)
 		x = self.model.transformer.ln_f(x)
 		x = x.to(self.device0)
-		x = self.model.transformer.head(x)
+		x = self.model.lm_head(x)
 		return x

@@ -7,6 +7,7 @@ class WikiText2Dataset(Dataset):
 	def __init__(self, split='train'): 
 		self.dataset = load_dataset('wikitext', 'wikitext-2-raw-v1', split=split) 
 		self.tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+		self.tokenizer.pad_token = self.tokenizer.eos_token
 		self.data = self.tokenizer(
 			self.dataset['text'],
 			return_tensors='pt',
