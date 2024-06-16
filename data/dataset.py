@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
-from dataset import load_dataset
+from datasets import load_dataset
 from transformers import GPT2Tokenizer
 
 class WikiText2Dataset(Dataset):
