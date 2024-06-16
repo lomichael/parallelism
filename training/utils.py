@@ -15,8 +15,8 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
 		input_ids, attention_mask = input_ids.to(device), attention_mask.to(device)
 
 		optimizer.zero_grad()
-		outputs = model(input_ids, attention_mask=attention_mask)
-		loss = criterion(outputs.logits.view(-1, outputs.logits.size(-1)), input_ids.view(-1)) # Flatten the outputs and labels
+		logits = model(input_ids, attention_mask=attention_mask)
+		loss = criterion(logits.view(-1, logits.size(-1)), input_ids.view(-1)) # Flatten the outputs and labels
 		loss.backward()
 		optimizer.step()
 
