@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.distributed import init_process_group, destroy_process_group
 from torch.distributed.pipeline.sync import Pipe
 
 class PipelineParallel(nn.Module):
@@ -10,20 +9,32 @@ class PipelineParallel(nn.Module):
 		self.device0 = torch.device('cuda:0')
 		self.device1 = torch.device('cuda:1')
 
-		self.model.transformer.half1 = nn.Sequential(*self.model.transformer.h[:6]).to(self.device0)
-		self.model.transformer.half2 = nn.Sequential(*self.model.transformer.h[6:]).to(self.device1)
-
-		self.model = nn.Sequential(
+		# Split the model into pipeline stages
+		self.embedding = nn.Sequential(
 			self.model.transformer.wte,
-			self.model.transformer.drop,
-			self.model.transformer.half1,
-			self.model.transformer.half2,
-			self.model.transformer.ln_f,
-			self.model.lm_head,
+			self.model.transformer.wpe,
+			self.model.transformer.drop
+		).to(self.device0)
+
+		self.transformer_part1 = nn.Sequential(*self.model.transformer.h[:6]).to(self.device0)
+		self.transformer_part2 = nn.Sequential(*self.model.transformer.h[6:]).to(self.device1)
+		self.ln_f = self.model.transformer.ln_f.to(self.device1)
+		self.lm_head = self.model.lm_head.to(self.device1)
+
+		# Create the pipeline model
+		self.pipeline_model = nn.Sequential(
+			self.embedding,
+			self.transformer_part1,
+			self.transformer_part2,
+			self.ln_f,
+			self.lm_head
 		)
 
-		self.model = Pipe(self.model, chunks=8, devices=[self.device0, self.device1])
+		self.pipeline_model = Pipe(self.pipeline_model, chunks=8, devices=[self.device0, self.device1])
 
-	def forward(self, x):
-		return self.model(x)
+	def forward(self, input_ids, attention_mask=None):
+		input_ids = input_ids.to(self.device0)
+		if attention_mask is not None:
+			attention_mask = attention_mask.to(self.device0)
+		return self.pipeline_model(input_ids)
 

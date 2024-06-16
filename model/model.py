@@ -6,5 +6,5 @@ class SimpleGPT2(nn.Module):
 		super(SimpleGPT2, self).__init__()
 		self.transformer = GPT2LMHeadModel.from_pretrained(model_name)
 
-	def forward(self, x):
-		return self.transformer(x).logits
+	def forward(self, input_ids, attention_mask=None):
+		return self.transformer(input_ids, attention_mask=attention_mask).logits

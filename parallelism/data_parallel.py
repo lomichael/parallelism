@@ -6,6 +6,6 @@ class DataParallel(nn.Module):
 		super(DataParallel, self).__init__()
 		self.model = DP(model)
 	
-	def forward(self, x):
-		return self.model(x)
+	def forward(self, input_ids, attention_mask=None):
+		return self.model(input_ids, attention_mask=attention_mask)
 
