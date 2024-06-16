@@ -16,16 +16,16 @@ def main():
 	
 	model = SimpleGPT2()
 	model = PipelineParallel(model)  # Wrap model with pipeline parallelism
-	dataloader = get_dataloader()
+	dataloader = get_dataloader(batch_size=32, split='train')
 	optimizer = optim.Adam(model.parameters(), lr=1e-4)
 	criterion = nn.CrossEntropyLoss()
 
 	epochs = 5
 	total_training_time = 0
 	for epoch in range(epochs):
-		loss, accuracy, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device)
+		loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device)
 		total_training_time += epoch_time
-		logging.info(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Epoch Time: {epoch_time:.2f}s')
+		logging.info(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}, Epoch Time: {epoch_time:.2f}s')
 
 	logging.info(f'Total Training Time: {total_training_time:.2f}s')
 
