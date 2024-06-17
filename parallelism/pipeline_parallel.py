@@ -9,26 +9,22 @@ class PipelineParallel(nn.Module):
         self.device0 = torch.device('cuda:0')
         self.device1 = torch.device('cuda:1')
 
-        # Load the model configuration
         config = GPT2Config.from_pretrained(model_name)
-        model = GPT2LMHeadModel.from_pretrained(model_name)
 
-        # Move the entire model to device0 first
-        model.to(self.device0)
-
-        # Manually create embedding layers and position embeddings
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_size).to(self.device0)
         self.position_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size).to(self.device0)
         self.dropout = nn.Dropout(config.embd_pdrop).to(self.device0)
 
-        # Manually create transformer blocks
-        self.transformer_blocks_part1 = nn.ModuleList([model.transformer.h[i].to(self.device0) for i in range(6)])
-        self.transformer_blocks_part2 = nn.ModuleList([model.transformer.h[i].to(self.device1) for i in range(6, 12)])
+        self.transformer_blocks_part1 = nn.ModuleList(
+            [GPT2LMHeadModel(config).transformer.h[i].to(self.device0) for i in range(6)]
+        )
+        self.transformer_blocks_part2 = nn.ModuleList(
+            [GPT2LMHeadModel(config).transformer.h[i].to(self.device1) for i in range(6, 12)]
+        )
 
         self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon).to(self.device1)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False).to(self.device1)
 
-        # Create the pipeline model
         self.pipeline_model = nn.Sequential(
             *self.transformer_blocks_part1,
             *self.transformer_blocks_part2,
