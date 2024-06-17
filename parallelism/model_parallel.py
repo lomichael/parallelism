@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from transformers import GPT2LMHeadModel, GPT2Config, GPT2Block
+from transformers import GPT2LMHeadModel, GPT2Config
 
 class ModelParallel(nn.Module):
     def __init__(self, model_name='gpt2'):
@@ -8,20 +8,23 @@ class ModelParallel(nn.Module):
         self.device0 = torch.device('cuda:0')
         self.device1 = torch.device('cuda:1')
 
-        # Load the model configuration
-        config = GPT2Config.from_pretrained(model_name)
+        # Load the model
+        model = GPT2LMHeadModel.from_pretrained(model_name)
 
-        # Manually create embedding layers and position embeddings
-        self.embedding = nn.Embedding(config.vocab_size, config.hidden_size).to(self.device0)
-        self.position_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size).to(self.device0)
-        self.dropout = nn.Dropout(config.embd_pdrop).to(self.device0)
+        # Move the entire model to device0 first
+        model.to(self.device0)
 
-        # Manually create transformer blocks
-        self.transformer_blocks_part1 = nn.ModuleList([GPT2Block(config).to(self.device0) for _ in range(6)])
-        self.transformer_blocks_part2 = nn.ModuleList([GPT2Block(config).to(self.device1) for _ in range(6, 12)])
+        # Manually split the embedding and transformer blocks for model parallelism
+        self.embedding = nn.Embedding(model.config.vocab_size, model.config.hidden_size).to(self.device0)
+        self.position_embedding = nn.Embedding(model.config.max_position_embeddings, model.config.hidden_size).to(self.device0)
+        self.dropout = nn.Dropout(model.config.embd_pdrop).to(self.device0)
 
-        self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon).to(self.device1)
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False).to(self.device1)
+        # Splitting the transformer layers without directly accessing non-existent attributes
+        self.transformer_blocks_part1 = nn.ModuleList([model.transformer.h[i].to(self.device0) for i in range(6)])
+        self.transformer_blocks_part2 = nn.ModuleList([model.transformer.h[i].to(self.device1) for i in range(6, 12)])
+
+        self.ln_f = nn.LayerNorm(model.config.hidden_size, eps=model.config.layer_norm_epsilon).to(self.device1)
+        self.lm_head = nn.Linear(model.config.hidden_size, model.config.vocab_size, bias=False).to(self.device1)
 
     def forward(self, input_ids, attention_mask=None):
         input_ids = input_ids.to(self.device0)

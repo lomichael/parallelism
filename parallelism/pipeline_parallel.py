@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributed.pipeline.sync import Pipe
-from transformers import GPT2Config, GPT2Block
+from transformers import GPT2Config, GPT2LMHeadModel
 
 class PipelineParallel(nn.Module):
     def __init__(self, model_name='gpt2'):
@@ -11,6 +11,10 @@ class PipelineParallel(nn.Module):
 
         # Load the model configuration
         config = GPT2Config.from_pretrained(model_name)
+        model = GPT2LMHeadModel.from_pretrained(model_name)
+
+        # Move the entire model to device0 first
+        model.to(self.device0)
 
         # Manually create embedding layers and position embeddings
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_size).to(self.device0)
@@ -18,8 +22,8 @@ class PipelineParallel(nn.Module):
         self.dropout = nn.Dropout(config.embd_pdrop).to(self.device0)
 
         # Manually create transformer blocks
-        self.transformer_blocks_part1 = nn.ModuleList([GPT2Block(config).to(self.device0) for _ in range(6)])
-        self.transformer_blocks_part2 = nn.ModuleList([GPT2Block(config).to(self.device1) for _ in range(6, 12)])
+        self.transformer_blocks_part1 = nn.ModuleList([model.transformer.h[i].to(self.device0) for i in range(6)])
+        self.transformer_blocks_part2 = nn.ModuleList([model.transformer.h[i].to(self.device1) for i in range(6, 12)])
 
         self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon).to(self.device1)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False).to(self.device1)

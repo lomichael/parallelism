@@ -7,5 +7,5 @@ class SimpleGPT2(nn.Module):
 		self.transformer = GPT2LMHeadModel.from_pretrained(model_name)
 
 	def forward(self, input_ids, attention_mask=None):
-		outputs = self.transformer(input_ids, attention_mask=attention_mask).logits
+		outputs = self.transformer(input_ids, attention_mask=attention_mask)
 		return outputs.logits
