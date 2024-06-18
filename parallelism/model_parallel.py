@@ -12,7 +12,7 @@ class ModelParallel(nn.Module):
         self.devices = [torch.device(f'cuda:{i}') for i in range(num_gpus)]
 
         config = GPT2Config.from_pretrained(model_name)
-        
+
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_size).to(self.devices[0])
         self.position_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size).to(self.devices[0])
         self.dropout = nn.Dropout(config.embd_pdrop).to(self.devices[0])
@@ -38,14 +38,14 @@ class ModelParallel(nn.Module):
         x = self.embedding(input_ids) + self.position_embedding(position_ids)
         x = self.dropout(x)
 
+        # Process part1 on respective devices
         for i, block in enumerate(self.transformer_blocks_part1):
-            device = self.devices[i % len(self.devices)]
-            x = x.to(device)
+            x = x.to(self.devices[i % len(self.devices)])
             x = block(x)[0]
 
+        # Process part2 on respective devices
         for i, block in enumerate(self.transformer_blocks_part2):
-            device = self.devices[(i + 6) % len(self.devices)]
-            x = x.to(device)
+            x = x.to(self.devices[(i + 6) % len(self.devices)])
             x = block(x)[0]
 
         x = x.to(self.devices[-1])
