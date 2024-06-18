@@ -10,8 +10,9 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
     epoch_start_time.record()
 
     for batch in tqdm(dataloader, desc="Training Model Parallel"):
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
+        # Assuming batch is a list containing input_ids and attention_mask
+        input_ids = batch[0].to(device)
+        attention_mask = batch[1].to(device)
 
         optimizer.zero_grad()
         
