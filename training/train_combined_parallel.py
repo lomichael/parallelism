@@ -9,6 +9,7 @@ from parallelism.combined_parallel import CombinedParallel
 from data.datasets import get_dataloader
 import logging
 
+torch.cuda.empty_cache()
 logging.basicConfig(level=logging.INFO, filename="training_combined_parallel.log", filemode="w")
 
 def main():

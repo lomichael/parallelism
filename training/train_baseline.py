@@ -6,6 +6,7 @@ from training.utils import train_one_epoch
 from data.datasets import get_dataloader
 import logging
 
+torch.cuda.empty_cache()
 logging.basicConfig(level=logging.INFO, filename="training.log", filemode="w")
 
 def main():
