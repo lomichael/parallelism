@@ -6,6 +6,8 @@ from training.utils import train_one_epoch
 from data.datasets import get_dataloader
 import logging
 
+logging.basicConfig(level=logging.INFO, filename="training.log", filemode="w")
+
 def main():
     model_name = "gpt2"
     model = GPT2LMHeadModel.from_pretrained(model_name)
@@ -13,7 +15,7 @@ def main():
     model.to(device)
 
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-    tokenizer.pad_token = tokenizer.eos_token  # Set pad_token to eos_token
+    tokenizer.pad_token = tokenizer.eos_token
 
     dataloader = get_dataloader(tokenizer, batch_size=32, dataset_name="wikitext-2", split="train")
 

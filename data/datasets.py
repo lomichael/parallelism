@@ -19,12 +19,11 @@ class WikiText2Dataset(Dataset):
             max_length=512,
             truncation=True,
             padding="max_length",
-            add_special_tokens=True  # Ensure special tokens are added
+            add_special_tokens=True
         )
         input_ids = inputs['input_ids'].squeeze()
         attention_mask = inputs['attention_mask'].squeeze()
 
-        # Ensure no sequence is empty
         if input_ids.size(0) == 0:
             input_ids = torch.tensor([self.tokenizer.eos_token_id] * 512)
             attention_mask = torch.tensor([1] * 512)
