@@ -16,7 +16,6 @@ def main():
     num_gpus = torch.cuda.device_count()
     assert num_gpus >= 4, "This training script requires at least 4 GPUs."
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model_name = 'gpt2'
 
     model = ModelParallel(model_name)  # Wrap model with model parallelism
@@ -31,7 +30,7 @@ def main():
     
     epochs = 3
     for epoch in tqdm(range(epochs), desc="Training Model Parallel"):
-        loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device)
+        loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, model.devices[0])
         logging.info(f"Epoch {epoch + 1}: Loss = {loss:.4f}, Time = {epoch_time:.2f}s")
     
     total_end_time = time.time()
