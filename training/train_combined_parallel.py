@@ -9,10 +9,10 @@ from parallelism.combined_parallel import CombinedParallel
 from data.datasets import get_dataloader
 import logging
 
-torch.cuda.empty_cache()
 logging.basicConfig(level=logging.INFO, filename="training_combined_parallel.log", filemode="w")
 
 def main():
+    torch.cuda.empty_cache()
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '29500'
 
@@ -23,16 +23,18 @@ def main():
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
 
-    dataloader = get_dataloader(tokenizer, batch_size=32, dataset_name="wikitext-2", split="train")
+    batch_size = 4  # Reduced batch size
+    dataloader = get_dataloader(tokenizer, batch_size=batch_size, dataset_name="wikitext-2", split="train")
 
     optimizer = Adam(model.parameters(), lr=5e-5)
     criterion = CrossEntropyLoss()
+    accumulation_steps = 8  # Gradient accumulation steps
 
     rpc.init_rpc("worker", rank=0, world_size=1)
 
     try:
         for epoch in range(3):
-            loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device, description=f"Training Combined Parallel Epoch {epoch+1}")
+            loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device, description=f"Training Combined Parallel Epoch {epoch+1}", accumulation_steps=accumulation_steps)
             logging.info(f"Epoch {epoch+1} - Combined Parallel Training Loss: {loss}, Time: {epoch_time} seconds")
     finally:
         rpc.shutdown()
