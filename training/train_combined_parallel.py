@@ -4,7 +4,7 @@ import torch.distributed.rpc as rpc
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2Tokenizer
-from .utils import train_one_epoch
+from training.utils import train_one_epoch
 from parallelism.combined_parallel import CombinedParallel
 from data.datasets import get_dataloader
 import logging

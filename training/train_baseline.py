@@ -2,7 +2,7 @@ import torch
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from .utils import train_one_epoch
+from training.utils import train_one_epoch
 from data.datasets import get_dataloader
 import logging
 
