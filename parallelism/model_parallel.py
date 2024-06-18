@@ -34,7 +34,7 @@ class ModelParallel(nn.Module):
         logging.info(f"Input IDs device before embedding: {input_ids.device}")
         input_ids = input_ids.to(self.devices[0])
         logging.info(f"Input IDs device after moving to device[0]: {input_ids.device}")
-        
+
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.devices[0])
             logging.info(f"Attention mask device after moving to device[0]: {attention_mask.device}")
@@ -52,8 +52,13 @@ class ModelParallel(nn.Module):
             x = x.to(device)
             logging.info(f"Block {i} part1 input device: {x.device}")
             x = block(x)[0]
-            x = x.to(self.devices[(i + 1) % len(self.devices)])  # Ensure consistent device placement
             logging.info(f"Block {i} part1 output device: {x.device}")
+
+            # Ensure layer norm and other params are on the same device
+            for param in block.parameters():
+                assert param.device == x.device, f"Block {i} parameter on {param.device} while input is on {x.device}"
+            if i < len(self.transformer_blocks_part1) - 1:
+                x = x.to(self.devices[(i + 1) % len(self.devices)])  # Ensure consistent device placement
 
         # Process part2 on respective devices
         for i, block in enumerate(self.transformer_blocks_part2):
@@ -61,12 +66,17 @@ class ModelParallel(nn.Module):
             x = x.to(device)
             logging.info(f"Block {i+6} part2 input device: {x.device}")
             x = block(x)[0]
-            x = x.to(self.devices[(i + 7) % len(self.devices)])  # Ensure consistent device placement
             logging.info(f"Block {i+6} part2 output device: {x.device}")
+
+            # Ensure layer norm and other params are on the same device
+            for param in block.parameters():
+                assert param.device == x.device, f"Block {i+6} parameter on {param.device} while input is on {x.device}"
+            if i < len(self.transformer_blocks_part2) - 1:
+                x = x.to(self.devices[(i + 7) % len(self.devices)])  # Ensure consistent device placement
 
         x = x.to(self.devices[-1])
         logging.info(f"Device after transformer blocks: {x.device}")
-        
+
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.devices[-1])
             logging.info(f"Attention mask device after moving to last device: {attention_mask.device}")
