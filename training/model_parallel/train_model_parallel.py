@@ -12,6 +12,8 @@ from data.dataset import get_dataloader
 from parallelism.model_parallel import ModelParallel
 from training.utils import train_one_epoch
 
+logging.basicConfig(level=logging.INFO)
+
 def main():
     num_gpus = torch.cuda.device_count()
     assert num_gpus >= 4, "This training script requires at least 4 GPUs."

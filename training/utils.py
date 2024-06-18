@@ -12,8 +12,14 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
     start_time = time.time()
     
     for input_ids, attention_mask in tqdm(dataloader, desc="Training Epoch", leave=False):
+        logging.info(f"Batch input IDs device: {input_ids.device}")
         input_ids = input_ids.to(device)
-        attention_mask = attention_mask.to(device)
+        logging.info(f"Batch input IDs device after moving to device: {input_ids.device}")
+
+        if attention_mask is not None:
+            logging.info(f"Batch attention mask device: {attention_mask.device}")
+            attention_mask = attention_mask.to(device)
+            logging.info(f"Batch attention mask device after moving to device: {attention_mask.device}")
 
         optimizer.zero_grad()
         logits = model(input_ids, attention_mask=attention_mask)
