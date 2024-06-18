@@ -29,7 +29,7 @@ class ModelParallel(nn.Module):
             [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[i % num_gpus]) for i in range(6)]
         )
         self.transformer_blocks_part2 = nn.ModuleList(
-            [GPT2LMHeadModel(config).transformer.h[i - 6].to(self.devices[i % num_gpus]) for i in range(6, 12)]
+            [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[(i % num_gpus)]) for i in range(6, 12)]
         )
 
         self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon).to(self.devices[-1])
@@ -66,14 +66,14 @@ class ModelParallel(nn.Module):
 
         # Process part2 on respective devices
         for i, block in enumerate(self.transformer_blocks_part2):
-            device = self.devices[i % num_gpus]
+            device = self.devices[(i - 6) % num_gpus]
             x = x.to(device)
             logging.info(f"Block {i+6} part2 input device: {x.device}")
             x = block(x)[0]
             logging.info(f"Block {i+6} part2 output device: {x.device}")
 
             if i < len(self.transformer_blocks_part2) - 1:
-                x = x.to(self.devices[(i + 1) % num_gpus])  # Ensure consistent device placement
+                x = x.to(self.devices[(i - 5) % num_gpus])  # Ensure consistent device placement
 
         x = x.to(self.devices[-1])
         logging.info(f"Device after transformer blocks: {x.device}")
