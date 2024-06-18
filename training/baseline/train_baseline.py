@@ -22,7 +22,7 @@ def main():
 	optimizer = optim.Adam(model.parameters(), lr=1e-4)
 	criterion = nn.CrossEntropyLoss()
 
-	epochs = 5
+	epochs = 3
 	total_training_time = 0
 	for epoch in range(epochs):
 		loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device)
