@@ -1,9 +1,16 @@
 import torch.nn as nn
 import torch
+from transformers import GPT2LMHeadModel, GPT2Config
 from torch.distributed.pipeline.sync import Pipe
 from torch.distributed import rpc
-from torch.nn.parallel import DataParallel as DP
-from transformers import GPT2Config, GPT2LMHeadModel
+import logging
+
+# Configure logging to a file
+logging.basicConfig(
+    filename='combined_parallel.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class CombinedParallel(nn.Module):
     def __init__(self, model_name='gpt2'):
@@ -21,40 +28,65 @@ class CombinedParallel(nn.Module):
         self.dropout = nn.Dropout(config.embd_pdrop).to(self.devices[0])
 
         self.transformer_blocks_part1 = nn.ModuleList(
-            [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[i % num_gpus]) for i in range(6)]
+            [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[i % 2]) for i in range(6)]
         )
         self.transformer_blocks_part2 = nn.ModuleList(
-            [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[(i + 6) % num_gpus]) for i in range(6, 12)]
+            [GPT2LMHeadModel(config).transformer.h[i].to(self.devices[2 + (i % 2)]) for i in range(6, 12)]
         )
 
         self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon).to(self.devices[-1])
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False).to(self.devices[-1])
 
-        self.pipeline_model = nn.Sequential(
-            *self.transformer_blocks_part1,
-            *self.transformer_blocks_part2,
-            self.ln_f,
-            self.lm_head
-        )
-
-        self.pipeline_model = Pipe(self.pipeline_model, chunks=8)
-        self.pipeline_model = DP(self.pipeline_model, device_ids=[i for i in range(num_gpus)])
+        self.pipeline_model = Pipe(self, chunks=8)
 
     def forward(self, input_ids, attention_mask=None):
+        num_gpus = len(self.devices)
+
+        logging.info(f"Input IDs device before embedding: {input_ids.device}")
         input_ids = input_ids.to(self.devices[0])
+        logging.info(f"Input IDs device after moving to device[0]: {input_ids.device}")
+
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.devices[0])
+            logging.info(f"Attention mask device after moving to device[0]: {attention_mask.device}")
 
         position_ids = torch.arange(input_ids.size(-1), dtype=torch.long, device=input_ids.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
 
         x = self.embedding(input_ids) + self.position_embedding(position_ids)
+        logging.info(f"Embedding output device: {x.device}")
         x = self.dropout(x)
-        return self.pipeline_model(x, attention_mask=attention_mask)
 
-# Initialize RPC framework
-if __name__ == "__main__":
-    rpc.init_rpc("worker", rank=0, world_size=1)
-    main()
-    rpc.shutdown()
+        for i, block in enumerate(self.transformer_blocks_part1):
+            device = self.devices[i % 2]
+            x = x.to(device)
+            logging.info(f"Block {i} part1 input device: {x.device}")
+            x = block(x)[0]
+            logging.info(f"Block {i} part1 output device: {x.device}")
+
+            if i < len(self.transformer_blocks_part1) - 1:
+                x = x.to(self.devices[(i + 1) % 2])
+
+        for i, block in enumerate(self.transformer_blocks_part2):
+            device = self.devices[2 + (i % 2)]
+            x = x.to(device)
+            logging.info(f"Block {i+6} part2 input device: {x.device}")
+            x = block(x)[0]
+            logging.info(f"Block {i+6} part2 output device: {x.device}")
+
+            if i < len(self.transformer_blocks_part2) - 1:
+                x = x.to(self.devices[2 + ((i + 1) % 2)])
+
+        x = x.to(self.devices[-1])
+        logging.info(f"Device after transformer blocks: {x.device}")
+
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(self.devices[-1])
+            logging.info(f"Attention mask device after moving to last device: {attention_mask.device}")
+
+        x = self.ln_f(x)
+        logging.info(f"LayerNorm output device: {x.device}")
+        logits = self.lm_head(x)
+        logging.info(f"Logits device: {logits.device}")
+        return logits
 

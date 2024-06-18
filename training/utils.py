@@ -2,17 +2,16 @@ import torch
 from tqdm import tqdm
 import logging
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, description="Training"):
     model.train()
     total_loss = 0.0
     epoch_start_time = torch.cuda.Event(enable_timing=True)
     epoch_end_time = torch.cuda.Event(enable_timing=True)
     epoch_start_time.record()
 
-    for batch in tqdm(dataloader, desc="Training Model Parallel"):
-        # Assuming batch is a list containing input_ids and attention_mask
-        input_ids = batch[0].to(device)
-        attention_mask = batch[1].to(device)
+    for batch in tqdm(dataloader, desc=description):
+        input_ids = batch['input_ids'].to(device)
+        attention_mask = batch['attention_mask'].to(device)
 
         optimizer.zero_grad()
         
@@ -24,7 +23,6 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
         logging.info(f"Logits device: {logits.device}")
         logging.info(f"Input IDs device for loss: {input_ids.device}")
 
-        # Ensure the input_ids are on the same device as the logits
         input_ids = input_ids.to(logits.device)
         
         loss = criterion(logits.view(-1, logits.size(-1)), input_ids.view(-1))
