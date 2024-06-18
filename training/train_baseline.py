@@ -2,7 +2,7 @@ import torch
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from training.utils import train_one_epoch
+from .utils import train_one_epoch
 from data.datasets import get_dataloader
 import logging
 
@@ -13,6 +13,7 @@ def main():
     model.to(device)
 
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token  # Set pad_token to eos_token
 
     dataloader = get_dataloader(tokenizer, batch_size=32, dataset_name="wikitext-2", split="train")
 

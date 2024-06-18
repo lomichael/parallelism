@@ -4,7 +4,7 @@ import torch.distributed.rpc as rpc
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2Tokenizer
-from training.utils import train_one_epoch
+from .utils import train_one_epoch
 from parallelism.combined_parallel import CombinedParallel
 from data.datasets import get_dataloader
 import logging
@@ -18,6 +18,7 @@ def main():
     device = model.devices[0]
 
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token  # Set pad_token to eos_token
 
     dataloader = get_dataloader(tokenizer, batch_size=32, dataset_name="wikitext-2", split="train")
 
