@@ -1,12 +1,12 @@
 import torch
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from training.utils import train_one_epoch
+from transformers import GPT2LMHeadModel
 from data.datasets import get_dataloader
+from training.utils import train_one_epoch
 import logging
 
-logging.basicConfig(level=logging.INFO, filename="training.log", filemode="w")
+logging.basicConfig(level=logging.INFO, filename="training_baseline.log", filemode="w")
 
 def main():
     torch.cuda.empty_cache()
@@ -15,15 +15,12 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    batch_size = 4  # Reduced batch size
-    dataloader = get_dataloader(tokenizer, batch_size=batch_size, dataset_name="wikitext-2", split="train")
+    batch_size = 4
+    dataloader = get_dataloader(batch_size=batch_size, split="train")
 
     optimizer = Adam(model.parameters(), lr=5e-5)
     criterion = CrossEntropyLoss()
-    accumulation_steps = 8  # Gradient accumulation steps
+    accumulation_steps = 8
 
     for epoch in range(3):
         loss, epoch_time = train_one_epoch(model, dataloader, optimizer, criterion, device, description=f"Training Baseline Epoch {epoch+1}", accumulation_steps=accumulation_steps)

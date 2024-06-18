@@ -1,42 +1,17 @@
-import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
+from datasets import load_dataset
 from transformers import GPT2Tokenizer
-import datasets
 
-class WikiText2Dataset(Dataset):
-    def __init__(self, tokenizer, split):
-        self.dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split=split)
-        self.tokenizer = tokenizer
+def get_dataloader(batch_size, split="train"):
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split=split)
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    tokenizer.pad_token = tokenizer.eos_token
 
-    def __len__(self):
-        return len(self.dataset)
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=512)
 
-    def __getitem__(self, idx):
-        text = self.dataset[idx]['text']
-        inputs = self.tokenizer(
-            text,
-            return_tensors="pt",
-            max_length=512,
-            truncation=True,
-            padding="max_length",
-            add_special_tokens=True
-        )
-        input_ids = inputs['input_ids'].squeeze()
-        attention_mask = inputs['attention_mask'].squeeze()
-
-        if input_ids.size(0) == 0:
-            input_ids = torch.tensor([self.tokenizer.eos_token_id] * 512)
-            attention_mask = torch.tensor([1] * 512)
-
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask
-        }
-
-def get_dataloader(tokenizer, batch_size, dataset_name="wikitext-2", split="train"):
-    if dataset_name == "wikitext-2":
-        dataset = WikiText2Dataset(tokenizer, split)
-        return DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    else:
-        raise ValueError(f"Unsupported dataset: {dataset_name}")
+    tokenized_datasets = dataset.map(tokenize_function, batched=True)
+    tokenized_datasets.set_format(type="torch", columns=["input_ids", "attention_mask"])
+    dataloader = DataLoader(tokenized_datasets, batch_size=batch_size)
+    return dataloader
 

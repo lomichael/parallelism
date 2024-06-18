@@ -26,11 +26,6 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, description
 
         total_loss += loss.item()
 
-        logging.info(f"Input IDs device: {input_ids.device}")
-        logging.info(f"Attention mask device: {attention_mask.device}")
-        logging.info(f"Logits device: {logits.device}")
-        logging.info(f"Loss: {loss.item()}")
-
     end_time = time.time()
     epoch_time = end_time - start_time
 
