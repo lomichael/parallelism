@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 from torch.distributed.pipeline.sync import Pipe
+from torch.distributed import rpc
 from torch.nn.parallel import DataParallel as DP
 from transformers import GPT2Config, GPT2LMHeadModel
 
@@ -50,4 +51,10 @@ class CombinedParallel(nn.Module):
         x = self.embedding(input_ids) + self.position_embedding(position_ids)
         x = self.dropout(x)
         return self.pipeline_model(x, attention_mask=attention_mask)
+
+# Initialize RPC framework
+if __name__ == "__main__":
+    rpc.init_rpc("worker", rank=0, world_size=1)
+    main()
+    rpc.shutdown()
 

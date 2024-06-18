@@ -39,6 +39,7 @@ class ModelParallel(nn.Module):
         x = self.dropout(x)
 
         for i, block in enumerate(self.transformer_blocks_part1):
+            x = x.to(self.devices[i % len(self.devices)])
             x = block(x)[0]
 
         x = x.to(self.devices[-1])
