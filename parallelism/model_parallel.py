@@ -3,10 +3,11 @@ import torch
 from transformers import GPT2LMHeadModel, GPT2Config
 import logging
 
+# Configure logging to a file
 logging.basicConfig(
-	filename='model_parallel.log',
-	level=logging.INFO,
-	format='%(asctime)s - %(levelname)s - %(message)s'
+    filename='model_parallel.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 class ModelParallel(nn.Module):
@@ -35,6 +36,8 @@ class ModelParallel(nn.Module):
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False).to(self.devices[-1])
 
     def forward(self, input_ids, attention_mask=None):
+        num_gpus = len(self.devices)
+        
         logging.info(f"Input IDs device before embedding: {input_ids.device}")
         input_ids = input_ids.to(self.devices[0])
         logging.info(f"Input IDs device after moving to device[0]: {input_ids.device}")
@@ -63,7 +66,7 @@ class ModelParallel(nn.Module):
 
         # Process part2 on respective devices
         for i, block in enumerate(self.transformer_blocks_part2):
-            device = self.devices[(i % num_gpus)]
+            device = self.devices[i % num_gpus]
             x = x.to(device)
             logging.info(f"Block {i+6} part2 input device: {x.device}")
             x = block(x)[0]
