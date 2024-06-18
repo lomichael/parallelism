@@ -54,9 +54,11 @@ class ModelParallel(nn.Module):
             x = block(x)[0]
             logging.info(f"Block {i} part1 output device: {x.device}")
 
-            # Ensure layer norm and other params are on the same device
-            for param in block.parameters():
-                assert param.device == x.device, f"Block {i} parameter on {param.device} while input is on {x.device}"
+            # Ensure all parameters are on the same device
+            for name, param in block.named_parameters():
+                if param.device != device:
+                    logging.error(f"Parameter {name} of Block {i} is on {param.device} instead of {device}")
+                assert param.device == device, f"Block {i} parameter {name} on {param.device} while input is on {x.device}"
             if i < len(self.transformer_blocks_part1) - 1:
                 x = x.to(self.devices[(i + 1) % len(self.devices)])  # Ensure consistent device placement
 
@@ -68,9 +70,11 @@ class ModelParallel(nn.Module):
             x = block(x)[0]
             logging.info(f"Block {i+6} part2 output device: {x.device}")
 
-            # Ensure layer norm and other params are on the same device
-            for param in block.parameters():
-                assert param.device == x.device, f"Block {i+6} parameter on {param.device} while input is on {x.device}"
+            # Ensure all parameters are on the same device
+            for name, param in block.named_parameters():
+                if param.device != device:
+                    logging.error(f"Parameter {name} of Block {i+6} is on {param.device} instead of {device}")
+                assert param.device == device, f"Block {i+6} parameter {name} on {param.device} while input is on {x.device}"
             if i < len(self.transformer_blocks_part2) - 1:
                 x = x.to(self.devices[(i + 7) % len(self.devices)])  # Ensure consistent device placement
 
