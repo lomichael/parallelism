@@ -26,9 +26,9 @@ def main(rank, world_size):
     model_name = "gpt2"
     model = GPT2LMHeadModel.from_pretrained(model_name)
     model.to(rank)
-    model = DDP(model, device_ids=[rank])
+    model = DDP(model, device_ids=[rank], output_device=rank)
 
-    batch_size = 4
+    batch_size = 2  # Reduced batch size
     dataloader = get_dataloader(batch_size=batch_size, split="train")
 
     optimizer = Adam(model.parameters(), lr=5e-5)

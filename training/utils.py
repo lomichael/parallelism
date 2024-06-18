@@ -17,7 +17,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, description
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
         loss = criterion(logits.view(-1, logits.size(-1)), input_ids.view(-1))
-        
+
         loss.backward()
 
         if (i + 1) % accumulation_steps == 0:
