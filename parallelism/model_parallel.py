@@ -40,13 +40,17 @@ class ModelParallel(nn.Module):
 
         # Process part1 on respective devices
         for i, block in enumerate(self.transformer_blocks_part1):
-            x = x.to(self.devices[i % len(self.devices)])
+            device = self.devices[i % len(self.devices)]
+            x = x.to(device)
             x = block(x)[0]
+            x = x.to(self.devices[(i + 1) % len(self.devices)])  # Move to next device for the next layer
 
         # Process part2 on respective devices
         for i, block in enumerate(self.transformer_blocks_part2):
-            x = x.to(self.devices[(i + 6) % len(self.devices)])
+            device = self.devices[(i + 6) % len(self.devices)]
+            x = x.to(device)
             x = block(x)[0]
+            x = x.to(self.devices[(i + 7) % len(self.devices)])  # Move to next device for the next layer
 
         x = x.to(self.devices[-1])
         if attention_mask is not None:

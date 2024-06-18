@@ -19,7 +19,7 @@ def main():
     model_name = 'gpt2'
 
     model = ModelParallel(model_name)  # Wrap model with model parallelism
-    
+
     dataloader = get_dataloader()
     optimizer = optim.Adam(model.parameters(), lr=5e-5)
     criterion = nn.CrossEntropyLoss()
