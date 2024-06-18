@@ -3,6 +3,7 @@ import os
 import time
 import logging
 from tqdm import tqdm
+from torch.distributed import rpc
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import torch
@@ -39,5 +40,7 @@ def main():
     logging.info(f"Total Training Time: {total_training_time:.2f}s")
 
 if __name__ == "__main__":
+    rpc.init_rpc("worker", rank=0, world_size=1)
     main()
+    rpc.shutdown()
 

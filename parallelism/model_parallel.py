@@ -39,15 +39,18 @@ class ModelParallel(nn.Module):
         x = self.dropout(x)
 
         for i, block in enumerate(self.transformer_blocks_part1):
-            x = x.to(self.devices[i % len(self.devices)])
+            device = self.devices[i % len(self.devices)]
+            x = x.to(device)
+            x = block(x)[0]
+
+        for i, block in enumerate(self.transformer_blocks_part2):
+            device = self.devices[(i + 6) % len(self.devices)]
+            x = x.to(device)
             x = block(x)[0]
 
         x = x.to(self.devices[-1])
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.devices[-1])
-
-        for block in self.transformer_blocks_part2:
-            x = block(x)[0]
 
         x = self.ln_f(x)
         logits = self.lm_head(x)
