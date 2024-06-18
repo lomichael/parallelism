@@ -9,16 +9,17 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from data.dataset import get_dataloader
-from model.simple_gpt2 import SimpleGPT2
 from parallelism.data_parallel import DataParallel
 from training.utils import train_one_epoch
 
 def main():
+    num_gpus = torch.cuda.device_count()
+    assert num_gpus >= 4, "This training script requires at least 4 GPUs."
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model_name = 'gpt2'
 
-    model = SimpleGPT2(model_name).to(device)
-    model = DataParallel(model)  # Wrap model with data parallelism
+    model = DataParallel(model_name).to(device)  # Wrap model with data parallelism
 
     dataloader = get_dataloader()
     optimizer = optim.Adam(model.parameters(), lr=5e-5)
@@ -35,7 +36,7 @@ def main():
     
     total_end_time = time.time()
     total_training_time = total_end_time - total_start_time
-    logging.info(f"Total Training Time (Data Parallel): {total_training_time:.2f}s")
+    logging.info(f"Total Training Time: {total_training_time:.2f}s")
 
 if __name__ == "__main__":
     main()

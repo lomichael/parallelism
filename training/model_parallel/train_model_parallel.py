@@ -13,10 +13,13 @@ from parallelism.model_parallel import ModelParallel
 from training.utils import train_one_epoch
 
 def main():
+    num_gpus = torch.cuda.device_count()
+    assert num_gpus >= 4, "This training script requires at least 4 GPUs."
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model_name = 'gpt2'
 
-    model = ModelParallel(model_name).to(device)  # Wrap model with model parallelism
+    model = ModelParallel(model_name)  # Wrap model with model parallelism
     
     dataloader = get_dataloader()
     optimizer = optim.Adam(model.parameters(), lr=5e-5)
@@ -33,7 +36,7 @@ def main():
     
     total_end_time = time.time()
     total_training_time = total_end_time - total_start_time
-    logging.info(f"Total Training Time (Model Parallel): {total_training_time:.2f}s")
+    logging.info(f"Total Training Time: {total_training_time:.2f}s")
 
 if __name__ == "__main__":
     main()
