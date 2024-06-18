@@ -3,6 +3,8 @@ import torch
 from transformers import GPT2LMHeadModel, GPT2Config
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 class ModelParallel(nn.Module):
     def __init__(self, model_name='gpt2'):
         super(ModelParallel, self).__init__()
@@ -50,6 +52,7 @@ class ModelParallel(nn.Module):
             x = x.to(device)
             logging.info(f"Block {i} part1 input device: {x.device}")
             x = block(x)[0]
+            x = x.to(self.devices[(i + 1) % len(self.devices)])  # Ensure consistent device placement
             logging.info(f"Block {i} part1 output device: {x.device}")
 
         # Process part2 on respective devices
@@ -58,6 +61,7 @@ class ModelParallel(nn.Module):
             x = x.to(device)
             logging.info(f"Block {i+6} part2 input device: {x.device}")
             x = block(x)[0]
+            x = x.to(self.devices[(i + 7) % len(self.devices)])  # Ensure consistent device placement
             logging.info(f"Block {i+6} part2 output device: {x.device}")
 
         x = x.to(self.devices[-1])
